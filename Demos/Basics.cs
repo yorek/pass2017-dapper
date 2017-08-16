@@ -14,8 +14,7 @@ namespace Demos
     [TestClass]
     public class Basics
     {
-        [TestMethod]
-        [TestCategory("Basics")]
+        [TestMethod]        
         public void ExecuteScalarSample()
         {
             // Return a scalar "object" value
@@ -32,7 +31,6 @@ namespace Demos
         }
 
         [TestMethod]
-        [TestCategory("Basics")]
         public void ExecuteSample()
         {
             // Return affected number rows
@@ -52,7 +50,6 @@ namespace Demos
         }
 
         [TestMethod]
-        [TestCategory("Basics")]
         public void QuerySample()
         {
             // Return an IEnumerable of dynamic (DapperRow) object
@@ -77,7 +74,6 @@ namespace Demos
         }
 
         [TestMethod]
-        [TestCategory("Basics")]
         public void QueryWithAnonymousObjectParameters()
         {
             Helper.RunDemo(conn =>
@@ -96,7 +92,6 @@ namespace Demos
         }
 
         [TestMethod]
-        [TestCategory("Basics")]
         public void QueryWithDynamicParameters()
         {
             Helper.RunDemo(conn =>
@@ -122,7 +117,6 @@ namespace Demos
         }
 
         [TestMethod]
-        [TestCategory("Basics")]
         public void ExecuteProcedure()
         {
             Helper.RunDemo(conn =>
@@ -143,7 +137,6 @@ namespace Demos
         }
 
         [TestMethod]
-        [TestCategory("Basics")]
         public void ExecuteProcedureWithOutputAndReturnValue()
         {
             Helper.RunDemo(conn =>

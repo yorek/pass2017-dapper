@@ -9,17 +9,41 @@ namespace Demos
 {
     public class User
     {
-        public int Id;
         public string FirstName;
         public string LastName;
         public string EmailAddress;
         public JArray Tags;
-        public Roles Roles;
+        public Roles Roles = new Roles();
+        public Company Company;
         public Preferences Preferences;
 
         public override string ToString()
         {
-            return String.Format($"[{Id},{FirstName},{LastName},{EmailAddress}]");
+            return String.Format($"{FirstName},{LastName},{EmailAddress}");
+        }
+    }
+
+    public class Company
+    {
+        public string CompanyName;
+        public Address Address;
+
+        public override string ToString()
+        {
+            return String.Format($"{CompanyName}");
+        }
+    }
+
+    public class Address
+    {
+        public string Street;
+        public string City;
+        public string State;
+        public string Country;
+
+        public override string ToString()
+        {
+            return String.Format($"{Street},{City},{State},{Country}");
         }
     }
 
@@ -37,7 +61,7 @@ namespace Demos
     {
         public override string ToString()
         {
-            return string.Join(",", this);
+            return string.Join("/", this);
         }
     }
 
