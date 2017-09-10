@@ -166,15 +166,106 @@ namespace Demos
             });
         }
 
-        [TestMethod] void BufferedVSUnbuffered()
+        [TestMethod]
+        public void Buffered()
         {
             Helper.RunDemo(conn =>
             {
-                var r1 = conn.Query("SELECT 1;", buffered: true);
+                conn.StateChange += ConnectionStateChange;
 
-                var r2 = conn.Query("SELECT 1;", buffered: false);
+                var rows = conn.Query("SELECT TOP (5000) ROW_NUMBER() OVER (ORDER BY a.[object_id]) AS n FROM sys.all_columns a, sys.all_columns b;", buffered: true);
+                foreach (var row in rows)
+                {
+                    System.Threading.Thread.Sleep(2);
+                }
+            });        
+        }
+
+        [TestMethod]
+        public void Unbuffered()
+        {
+            Helper.RunDemo(conn =>
+            {
+                conn.StateChange += ConnectionStateChange;
+
+                var rows = conn.Query("SELECT TOP (5000) ROW_NUMBER() OVER (ORDER BY a.[object_id]) AS n FROM sys.all_columns a, sys.all_columns b;", buffered: false);
+                foreach (var row in rows)
+                {
+                    System.Threading.Thread.Sleep(2);
+                }
             });
         }
 
+        [TestMethod]
+        public void JsonAsPlainText()
+        {
+            Helper.RunDemo(conn =>
+            {
+                User u = new User()
+                {
+                    Id = 5,
+                    FirstName = "Davide",
+                    LastName = "Mauri",
+                    EmailAddress = "info@davidemauri.it",
+                    Tags = new JArray(),
+                    Roles = new Roles()
+                    {
+                        new Role() { RoleName = "User" },
+                        new Role() { RoleName = "Developer" },
+                        new Role() { RoleName = "Administrator"}
+                    },
+                    Preferences = new Preferences()
+                    {
+                        Resolution = "1920x1080",
+                        Style = "Black",
+                        Theme = "Modern"
+                    }
+                };
+
+                var result = conn.Execute("[dbo].[SetUserViaJson]", new { @userData = JsonConvert.SerializeObject(u) }, commandType: CommandType.StoredProcedure);
+            });
+        }
+
+
+        /* 
+         * This will fail since a string cannot be
+         * natively converted to a JArray 
+         */
+        [TestMethod]       
+        public void JsonAutomaticMapping()
+        {
+            Helper.RunDemo(conn =>
+            {       
+                var result = conn.QuerySingle<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags = '[''one'', ''two'']' FROM dbo.[Users] WHERE Id=1");
+            });
+        }
+
+        /* 
+         * Workaround (for now, the real solution is to use Custom Type Handlers)
+         */
+        [TestMethod]
+        public void JsonAutomaticMappingWork()
+        {
+            Helper.RunDemo(conn =>
+            {
+                var r = conn.QuerySingle("SELECT Id, FirstName, LastName, EmailAddress, Tags = '[''one'', ''two'']' FROM dbo.[Users] WHERE Id=1");
+                var u = new User
+                {
+                    Id = r.Id,
+                    FirstName = r.FirstName,
+                    LastName = r.LastName,
+                    EmailAddress = r.EmailAddress,
+                    Tags = JArray.Parse(r.Tags)
+                };
+
+                Console.WriteLine(u);
+                Console.WriteLine(u.Tags);
+            });
+        }
+
+        private void ConnectionStateChange(object sender, StateChangeEventArgs e)
+        {
+            Console.WriteLine($"{DateTime.Now}: {e.CurrentState}");
+        }
     }
 }

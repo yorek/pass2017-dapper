@@ -10,6 +10,7 @@ namespace Demos
 {
     public class User
     {
+        public int Id;
         public string FirstName;
         public string LastName;
         public string EmailAddress;
@@ -20,7 +21,7 @@ namespace Demos
 
         public override string ToString()
         {
-            return String.Format($"{FirstName},{LastName},{EmailAddress}");
+            return String.Format($"'({Id}) {FirstName},{LastName},{EmailAddress}");
         }
     }
 
