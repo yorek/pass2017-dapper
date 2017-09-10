@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Microsoft.SqlServer.Types;
 
 namespace Demos
 {
@@ -40,10 +41,15 @@ namespace Demos
         public string City;
         public string State;
         public string Country;
+        public SqlGeography Location;
 
         public override string ToString()
         {
-            return String.Format($"{Street},{City},{State},{Country}");
+            string[] a = new string[] { Street, City, State, Country };
+
+            var r = Array.FindAll<string>(a, s => !string.IsNullOrEmpty(s));
+           
+            return String.Format(string.Join(",", r));
         }
     }
 

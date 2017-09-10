@@ -20,6 +20,7 @@ namespace Demos
                 IntegratedSecurity = true,
                 ConnectTimeout = 30,
                 ApplicationName = "DapperDemo"
+
             };
 
             _connectionString = builder.ConnectionString;

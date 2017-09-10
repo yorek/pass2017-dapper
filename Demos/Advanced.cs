@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.SqlServer.Types;
 
 namespace Demos
 {
@@ -121,5 +122,59 @@ namespace Demos
                     });
             });
         }
+
+        [TestMethod]
+        public void SpecialDataTypesSpatial()
+        {            
+            // Test as a scalar result
+            Helper.RunDemo(conn =>
+            {
+                var result = conn.ExecuteScalar<SqlGeometry>("SELECT geometry::Parse('POINT(0 0)') AS TestPoint");
+
+                Console.WriteLine(result.STAsText().Value);
+            });
+
+            // Test as a parameter
+            Helper.RunDemo(conn =>
+            {
+                var p = SqlGeography.Point(47.6062, 122.3321, 4326);
+
+                var result = conn.ExecuteScalar<SqlGeography>("SELECT @p AS TestPoint", new { @p = p });
+
+                Console.WriteLine(result.STAsText().Value);
+            });
+
+            // Test as a property in a POCO
+            Helper.RunDemo(conn =>
+            {
+                var result = conn.QuerySingle<Address>("SELECT geography::STPointFromText('POINT(122.3321 47.6062)', 4326) AS Location, 'Seattle' AS City, 'WA' AS State, 'US' AS Country");
+
+                Console.WriteLine("{0}: {1}", result.ToString(), result.Location.ToString());
+            });
+        }
+
+        [TestMethod]
+        public void SpecialDataTypesHiearchyID()
+        {
+            Helper.RunDemo(conn =>
+            {
+                var n1 = SqlHierarchyId.Parse("/1/1.1/2/");
+
+                var n2 = conn.ExecuteScalar<SqlHierarchyId>("SELECT @h.GetAncestor(2) AS HID", new { @h = n1 });
+
+                Console.WriteLine("Is {0} a descendant of {1}? {2}", n1, n2, n1.IsDescendantOf(n2));
+            });
+        }
+
+        [TestMethod] void BufferedVSUnbuffered()
+        {
+            Helper.RunDemo(conn =>
+            {
+                var r1 = conn.Query("SELECT 1;", buffered: true);
+
+                var r2 = conn.Query("SELECT 1;", buffered: false);
+            });
+        }
+
     }
 }
