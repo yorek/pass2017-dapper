@@ -11,6 +11,9 @@ using Microsoft.SqlServer.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Dapper;
 using Dapper.FluentMap;
+using Demos.Entities;
+using Demos.Mappers;
+using Demos.Handlers;
 
 namespace Demos
 {
@@ -179,7 +182,7 @@ namespace Demos
                     FirstName = "Davide",
                     LastName = "Mauri",
                     EmailAddress = "info@davidemauri.it",
-                    Tags = new JArray(),
+                    Tags = new JArray() { "one", "two" },
                     Roles = new Roles()
                     {
                         new Role() { RoleName = "User" },
@@ -198,8 +201,44 @@ namespace Demos
             });
         }
 
+        /* 
+         * This will fail since a string cannot be
+         * natively converted to a JArray 
+         */
         [TestMethod]
-        public void T08_CustomMapping()
+        public void T08_DefaultHandlingWithCustomType()
+        {
+            Helper.RunDemo(conn =>
+            {
+                var result = conn.QuerySingle<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags = '[\"one\", \"two\"]' FROM dbo.[Users] WHERE Id=5");
+            });
+        }
+
+        /* 
+         * Workaround (for now, the real solution is to use Custom Type Handlers)
+         */
+        [TestMethod]
+        public void T09_DefaultHandlingWithCustomTypeWorkaround()
+        {
+            Helper.RunDemo(conn =>
+            {
+                var r = conn.QuerySingle("SELECT Id, FirstName, LastName, EmailAddress, Tags = '[\"one\", \"two\"]' FROM dbo.[Users] WHERE Id=1");
+                var u = new User
+                {
+                    Id = r.Id,
+                    FirstName = r.FirstName,
+                    LastName = r.LastName,
+                    EmailAddress = r.EmailAddress,
+                    Tags = JArray.Parse(r.Tags)
+                };
+
+                Console.WriteLine(u);
+                Console.WriteLine(u.Tags);
+            });
+        }
+
+        [TestMethod]
+        public void T10_CustomMapping()
         {
             Helper.RunDemo(conn => {
 
@@ -252,7 +291,7 @@ namespace Demos
         }
 
         [TestMethod]
-        public void T09_CustomFluentMapping()
+        public void T11_CustomFluentMapping()
         {
             Helper.RunDemo(conn => {
 
@@ -280,7 +319,109 @@ namespace Demos
         }
 
         [TestMethod]
-        public void Buffered()
+        public void T12_CustomHandling()
+        {
+            Helper.RunDemo(conn =>
+            {
+                SqlMapper.ResetTypeHandlers();
+                SqlMapper.AddTypeHandler(new JArrayTypeHandler());
+
+                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags = '[\"one\", \"two\"]' FROM dbo.[Users] WHERE Id=1");
+
+                JArray roles = new JArray() { "one", "two", "three" };
+
+                Console.WriteLine("Tags: {0}", queryResult?.Tags);
+
+                // TODO: create an instead of trigger to handle the JSON nicely
+                conn.Execute("UPDATE dbo.[UserRoles] SET Role = @role WHERE UserId = 2", new { @role = roles });
+            });
+
+            Helper.RunDemo(conn =>
+            {
+                SqlMapper.ResetTypeHandlers();
+                SqlMapper.AddTypeHandler(new RolesTypeHandler());
+
+                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Roles = 'one|two' FROM dbo.[Users] WHERE Id=1");
+
+                Console.WriteLine("Roles: {0}", queryResult?.Roles);
+
+                Roles roles = new Roles
+                {
+                    new Role("one"),
+                    new Role("two"),
+                    new Role("three")
+                };
+
+            });
+        }
+
+        [TestMethod]
+        public void T13_CustomHandling()
+        {
+            Helper.RunDemo(conn =>
+            {
+                SqlMapper.ResetTypeHandlers();
+                SqlMapper.AddTypeHandler(new RolesTypeHandler());
+
+                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Roles = 'one|two' FROM dbo.[Users] WHERE Id=1");
+
+                Console.WriteLine("Roles: {0}", queryResult?.Roles);
+
+                Roles roles = new Roles
+                {
+                    new Role("one"),
+                    new Role("two"),
+                    new Role("three")
+                };
+
+            });
+        }
+
+        [TestMethod]
+        public void T14_ComplexCustomHandling()
+        {
+            Helper.RunDemo(conn =>
+            {
+                SqlMapper.ResetTypeHandlers();
+                SqlMapper.AddTypeHandler(new UserTypeHandler());
+
+                User u = new User()
+                {
+                    Id = 5,
+                    FirstName = "Davide",
+                    LastName = "Mauri",
+                    EmailAddress = "info@davidemauri.it",
+                    Tags = new JArray(),
+                    Roles = new Roles()
+                    {
+                        new Role() { RoleName = "User" },
+                        new Role() { RoleName = "Developer" },
+                        new Role() { RoleName = "Administrator"}
+                    },
+                    Preferences = new Preferences()
+                    {
+                        Resolution = "1920x1080",
+                        Style = "Black",
+                        Theme = "Modern"
+                    }
+                };
+
+                u.Tags.Add("one");
+                u.Tags.Add("two");
+
+                var executeResult = conn.Execute("dbo.SetUserViaJson", new { @userData = u }, commandType: CommandType.StoredProcedure);
+
+                Console.WriteLine("User saved: {0}", executeResult);
+
+                //var queryResult = conn.Query<User>("dbo.GetUserViaJson", new { @id = 5 }, commandType: CommandType.StoredProcedure).First();
+
+                //Console.WriteLine("User saved: {0}", queryResult);
+
+            });
+        }        
+
+        [TestMethod]
+        public void T15_Buffered()
         {
             Helper.RunDemo(conn =>
             {
@@ -295,7 +436,7 @@ namespace Demos
         }
 
         [TestMethod]
-        public void Unbuffered()
+        public void T16_Unbuffered()
         {
             Helper.RunDemo(conn =>
             {
@@ -308,44 +449,6 @@ namespace Demos
                 }
             });
         }
-
-        /* 
-         * This will fail since a string cannot be
-         * natively converted to a JArray 
-         */
-        [TestMethod]       
-        public void JsonAutomaticMapping()
-        {
-            Helper.RunDemo(conn =>
-            {       
-                var result = conn.QuerySingle<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags = '[''one'', ''two'']' FROM dbo.[Users] WHERE Id=1");
-            });
-        }
-
-        /* 
-         * Workaround (for now, the real solution is to use Custom Type Handlers)
-         */
-        [TestMethod]
-        public void JsonAutomaticMappingWork()
-        {
-            Helper.RunDemo(conn =>
-            {
-                var r = conn.QuerySingle("SELECT Id, FirstName, LastName, EmailAddress, Tags = '[''one'', ''two'']' FROM dbo.[Users] WHERE Id=1");
-                var u = new User
-                {
-                    Id = r.Id,
-                    FirstName = r.FirstName,
-                    LastName = r.LastName,
-                    EmailAddress = r.EmailAddress,
-                    Tags = JArray.Parse(r.Tags)
-                };
-
-                Console.WriteLine(u);
-                Console.WriteLine(u.Tags);
-            });
-        }
-
-
 
         private void ConnectionStateChange(object sender, StateChangeEventArgs e)
         {

@@ -67,14 +67,16 @@
   <ItemGroup>
     <Compile Include="Advanced.cs" />
     <Compile Include="Basics.cs" />
-    <Compile Include="Helper.cs" />
+    <Compile Include="Utilities\Handlers.cs" />
+    <Compile Include="Utilities\Mappers.cs" />
+    <Compile Include="Utilities\Helper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="Entities.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="ClassDiagram1.cd" />
+    <None Include="Diagrams\ClassDiagram1.cd" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

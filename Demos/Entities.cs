@@ -8,7 +8,7 @@ using Microsoft.SqlServer.Types;
 using Dapper;
 using Dapper.FluentMap.Mapping;
 
-namespace Demos
+namespace Demos.Entities
 { 
     public class User
     {
@@ -61,6 +61,15 @@ namespace Demos
     {
         public string RoleName { get; set; }
 
+        public Role()
+        {
+        }
+
+        public Role(string name)
+        {
+            RoleName = name;
+        }
+
         public override string ToString() 
         {
             return RoleName;
@@ -81,22 +90,5 @@ namespace Demos
         public string Style;
         public string Resolution;
     }
-
-    public class UserMap: EntityMap<User>
-    {
-        public UserMap()
-        {
-            Map(u => u.Id).ToColumn("UserId");
-        }
-    }
-
-    public class CompanyMap : EntityMap<Company>
-    {
-        public CompanyMap()
-        {
-            Map(c => c.Id).ToColumn("CompanyId");
-        }
-    }
-
 }
 
