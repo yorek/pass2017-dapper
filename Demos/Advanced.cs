@@ -335,24 +335,6 @@ namespace Demos
                 // TODO: create an instead of trigger to handle the JSON nicely
                 conn.Execute("UPDATE dbo.[UserRoles] SET Role = @role WHERE UserId = 2", new { @role = roles });
             });
-
-            Helper.RunDemo(conn =>
-            {
-                SqlMapper.ResetTypeHandlers();
-                SqlMapper.AddTypeHandler(new RolesTypeHandler());
-
-                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Roles = 'one|two' FROM dbo.[Users] WHERE Id=1");
-
-                Console.WriteLine("Roles: {0}", queryResult?.Roles);
-
-                Roles roles = new Roles
-                {
-                    new Role("one"),
-                    new Role("two"),
-                    new Role("three")
-                };
-
-            });
         }
 
         [TestMethod]
