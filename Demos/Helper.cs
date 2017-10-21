@@ -15,8 +15,8 @@ namespace Demos
         {
             var builder = new SqlConnectionStringBuilder()
             {
-                //DataSource = @"(LocalDB)\MSSQLLocalDB",
-                AttachDBFilename = @"d:\Work\Sensoria\Conferences\PASS 2017\Dapper\Demo\Data\DapperSample.mdf",
+                DataSource = @"(LocalDB)\MSSQLLocalDB",
+                AttachDBFilename = @"d:\Work\Sensoria\Conferences\PASS\2017\Dapper\Demo\Data\DapperSample.mdf",
                 IntegratedSecurity = true,
                 ConnectTimeout = 30,
                 ApplicationName = "DapperDemo"
