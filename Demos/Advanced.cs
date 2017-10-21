@@ -1,14 +1,16 @@
 ﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Data.SqlClient;
-using Dapper;
 using System.Dynamic;
 using System.Data;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Microsoft.SqlServer.Types;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Dapper;
+using Dapper.FluentMap;
 
 namespace Demos
 {
@@ -16,7 +18,7 @@ namespace Demos
     public class Advanced
     {
         [TestMethod]
-        public void MultipleExecution()
+        public void T01_MultipleExecution()
         {
             // Return a scalar "object" value
             Helper.RunDemo(conn =>
@@ -47,49 +49,11 @@ namespace Demos
         }
 
         [TestMethod]
-        public void MultipleMapping()
+        public void T02_MultipleResults()
         {
             Helper.RunDemo(conn =>
             {
-                var queryResult = conn.Query<User, Company, User>(
-                    "SELECT * FROM [dbo].[UsersAndCompany]",
-                    (u, c) =>
-                    {
-                        u.Company = c;
-                        return u;
-                    },
-                    splitOn: "CompanyId").First();
-
-                Console.WriteLine(queryResult);
-                Console.WriteLine(queryResult.Company);
-            });
-
-            Console.WriteLine();
-
-            Helper.RunDemo(conn =>
-            {
-                var queryResult = conn.Query<User, Company, Address, User>(
-                    "SELECT * FROM [dbo].[UsersAndCompany]",
-                    (u, c, a) =>
-                    {
-                        u.Company = c;
-                        u.Company.Address = a;
-                        return u;
-                    },
-                    splitOn: "CompanyId,Street").First();
-
-                Console.WriteLine(queryResult);
-                Console.WriteLine(queryResult.Company);
-                Console.WriteLine(queryResult.Company.Address);
-            });
-        }
-
-        [TestMethod]
-        public void MultipleResults()
-        {
-            Helper.RunDemo(conn =>
-            {
-                using (var multiQueryResults = conn.QueryMultiple("SELECT FirstName, LastName, EMailAddress FROM dbo.[Users]; SELECT CompanyName, Street, City, State, Country FROM dbo.[Company];"))
+                using (var multiQueryResults = conn.QueryMultiple("SELECT Id, FirstName, LastName, EMailAddress FROM dbo.[Users]; SELECT CompanyName, Street, City, State, Country FROM dbo.[Company];"))
                 {
                     var users = multiQueryResults.Read<User>();
                     var company = multiQueryResults.ReadFirst<Company>();
@@ -102,7 +66,45 @@ namespace Demos
         }
 
         [TestMethod]
-        public void TableValuedParameters()
+        public void T03_MultipleMapping()
+        {
+            Helper.RunDemo(conn =>
+            {
+                var queryResult = conn.Query<User, Company, User>(
+                    "SELECT * FROM [dbo].[UsersAndCompany]",
+                    (u, c) =>
+                    {
+                        u.Company = c;
+                        return u;
+                    },
+                    splitOn: "CompanyName").First();
+
+                Console.WriteLine(queryResult);
+                Console.WriteLine(queryResult.Company);
+            });
+
+            Console.WriteLine();
+
+            Helper.RunDemo(conn =>
+            {
+                var queryResult = conn.Query<User, Company, Address, User>(
+                    "SELECT * FROM [dbo].[UsersAndCompanyAndAddress]",
+                    (u, c, a) =>
+                    {
+                        u.Company = c;
+                        u.Company.Address = a;
+                        return u;
+                    },
+                    splitOn: "CompanyName,Street").First();
+
+                Console.WriteLine(queryResult);
+                Console.WriteLine(queryResult.Company);
+                Console.WriteLine(queryResult.Company.Address);
+            });
+        }
+
+        [TestMethod]
+        public void T04_TableValuedParameters()
         {
             Helper.RunDemo(conn =>
             {
@@ -124,7 +126,7 @@ namespace Demos
         }
 
         [TestMethod]
-        public void SpecialDataTypesSpatial()
+        public void T05_SpecialDataTypesSpatial()
         {            
             // Test as a scalar result
             Helper.RunDemo(conn =>
@@ -154,7 +156,7 @@ namespace Demos
         }
 
         [TestMethod]
-        public void SpecialDataTypesHiearchyID()
+        public void T06_SpecialDataTypesHiearchyID()
         {
             Helper.RunDemo(conn =>
             {
@@ -163,6 +165,117 @@ namespace Demos
                 var n2 = conn.ExecuteScalar<SqlHierarchyId>("SELECT @h.GetAncestor(2) AS HID", new { @h = n1 });
 
                 Console.WriteLine("Is {0} a descendant of {1}? {2}", n1, n2, n1.IsDescendantOf(n2));
+            });
+        }
+
+        [TestMethod]
+        public void T07_JsonAsPlainText()
+        {
+            Helper.RunDemo(conn =>
+            {
+                User u = new User()
+                {
+                    Id = 5,
+                    FirstName = "Davide",
+                    LastName = "Mauri",
+                    EmailAddress = "info@davidemauri.it",
+                    Tags = new JArray(),
+                    Roles = new Roles()
+                    {
+                        new Role() { RoleName = "User" },
+                        new Role() { RoleName = "Developer" },
+                        new Role() { RoleName = "Administrator"}
+                    },
+                    Preferences = new Preferences()
+                    {
+                        Resolution = "1920x1080",
+                        Style = "Black",
+                        Theme = "Modern"
+                    }
+                };
+
+                var result = conn.Execute("[dbo].[SetUserViaJson]", new { @userData = JsonConvert.SerializeObject(u) }, commandType: CommandType.StoredProcedure);
+            });
+        }
+
+        [TestMethod]
+        public void T08_CustomMapping()
+        {
+            Helper.RunDemo(conn => {
+
+                // For sake of simplicity use only one dictionary
+                // since all column names are unique
+                Dictionary<string, string> columnMaps = new Dictionary<string, string>();
+                columnMaps.Add("UserId", "Id");
+                columnMaps.Add("CompanyId", "Id");
+
+                // Create mapping function
+                var mapper = new Func<Type, string, PropertyInfo>((type, columnName) =>
+                {
+                    if (columnMaps.ContainsKey(columnName))
+                        return type.GetProperty(columnMaps[columnName]);
+                    else
+                        return type.GetProperty(columnName);
+                });
+
+                // Create customer mapper for User object
+                var userMap = new CustomPropertyTypeMap(
+                    typeof(User), 
+                    (type, columnName) => mapper(type, columnName)
+                    );
+
+                // Create customer mapper for Company object
+                var companyMap = new CustomPropertyTypeMap(
+                    typeof(Company),
+                    (type, columnName) => mapper(type, columnName)
+                    );
+
+                // Notify Dapper to use the mappers
+                SqlMapper.SetTypeMap(typeof(User), userMap);
+                SqlMapper.SetTypeMap(typeof(Company), companyMap);
+
+                // Same query as before (just the split column is changed)
+                var queryResult = conn.Query<User, Company, Address, User>(
+                                    "SELECT * FROM [dbo].[UsersAndCompanyAndAddress]",
+                                    (u, c, a) =>
+                                    {
+                                        u.Company = c;
+                                        u.Company.Address = a;
+                                        return u;
+                                    },
+                                    splitOn: "CompanyId,Street").First();
+
+                Console.WriteLine(queryResult);
+                Console.WriteLine(queryResult.Company);
+                Console.WriteLine(queryResult.Company.Address);
+            });
+        }
+
+        [TestMethod]
+        public void T09_CustomFluentMapping()
+        {
+            Helper.RunDemo(conn => {
+
+                FluentMapper.Initialize(config =>
+                {
+                    config.AddMap(new UserMap());
+                    config.AddMap(new CompanyMap());
+                });
+
+                // Same query as before (just the split column is changed)
+                var queryResult = conn.Query<User, Company, Address, User>(
+                                    "SELECT * FROM [dbo].[UsersAndCompanyAndAddress]",
+                                    (u, c, a) =>
+                                    {
+                                        u.Company = c;
+                                        u.Company.Address = a;
+                                        return u;
+                                    },
+                                    splitOn: "CompanyId,Street").First();
+
+                Console.WriteLine(queryResult);
+                Console.WriteLine(queryResult.Company);
+                Console.WriteLine(queryResult.Company.Address);
             });
         }
 
@@ -195,37 +308,6 @@ namespace Demos
                 }
             });
         }
-
-        [TestMethod]
-        public void JsonAsPlainText()
-        {
-            Helper.RunDemo(conn =>
-            {
-                User u = new User()
-                {
-                    Id = 5,
-                    FirstName = "Davide",
-                    LastName = "Mauri",
-                    EmailAddress = "info@davidemauri.it",
-                    Tags = new JArray(),
-                    Roles = new Roles()
-                    {
-                        new Role() { RoleName = "User" },
-                        new Role() { RoleName = "Developer" },
-                        new Role() { RoleName = "Administrator"}
-                    },
-                    Preferences = new Preferences()
-                    {
-                        Resolution = "1920x1080",
-                        Style = "Black",
-                        Theme = "Modern"
-                    }
-                };
-
-                var result = conn.Execute("[dbo].[SetUserViaJson]", new { @userData = JsonConvert.SerializeObject(u) }, commandType: CommandType.StoredProcedure);
-            });
-        }
-
 
         /* 
          * This will fail since a string cannot be
@@ -263,9 +345,11 @@ namespace Demos
             });
         }
 
+
+
         private void ConnectionStateChange(object sender, StateChangeEventArgs e)
         {
             Console.WriteLine($"{DateTime.Now}: {e.CurrentState}");
         }
-    }
+    }    
 }
