@@ -1,0 +1,2 @@
+Use JSON to return "n" children rows. For example User->Roles.
+Reduces roundtrips (make a performance test!)
