@@ -16,7 +16,7 @@ namespace Demos
     public class Basics
     {
         [TestMethod]        
-        public void ExecuteScalarSample()
+        public void T01_ExecuteScalarSample()
         {
             // Return a scalar "object" value
             Helper.RunDemo(conn => {
@@ -32,7 +32,7 @@ namespace Demos
         }
 
         [TestMethod]
-        public void ExecuteSample()
+        public void T02_ExecuteSample()
         {
             // Return affected number rows
             Helper.RunDemo(conn =>
@@ -51,7 +51,7 @@ namespace Demos
         }
 
         [TestMethod]
-        public void QuerySample()
+        public void T03_QuerySample()
         {
             // Return an IEnumerable of dynamic (DapperRow) object
             Helper.RunDemo(conn =>
@@ -75,12 +75,12 @@ namespace Demos
         }
 
         [TestMethod]
-        public void QueryWithAnonymousObjectParameters()
+        public void T04_QueryWithAnonymousObjectParameters()
         {
             Helper.RunDemo(conn =>
             {
                 var queryResult = conn.QueryFirst<User>("SELECT [Id], [FirstName], [LastName] FROM dbo.[Users] WHERE Id = @Id", new { Id = 1 });
-                Console.WriteLine("{0} ({1})", nameof(queryResult), queryResult.GetType());
+                Console.WriteLine("{0} ({1}): {2}", nameof(queryResult), queryResult.GetType(), queryResult);
             });
 
             Console.WriteLine();
@@ -88,12 +88,12 @@ namespace Demos
             Helper.RunDemo(conn =>
             {
                 var queryResult = conn.QueryFirst<User>("SELECT [Id], [EmailAddress] FROM dbo.[Users] WHERE FirstName = @FirstName AND LastName = @LastName", new { FirstName = "Davide", LastName = "Mauri" });
-                Console.WriteLine("{0} ({1})", nameof(queryResult), queryResult.GetType());
+                Console.WriteLine("{0} ({1}): {2}", nameof(queryResult), queryResult.GetType(), queryResult);
             });
         }
 
         [TestMethod]
-        public void QueryWithDynamicParameters()
+        public void T05_QueryWithDynamicParameters()
         {
             Helper.RunDemo(conn =>
             {
@@ -101,7 +101,7 @@ namespace Demos
                 dp.Add("Id", 1);
 
                 var queryResult = conn.QueryFirst<User>("SELECT [Id], [FirstName], [LastName] FROM dbo.[Users] WHERE Id = @Id", dp);
-                Console.WriteLine("{0} ({1})", nameof(queryResult), queryResult.GetType());
+                Console.WriteLine("{0} ({1}): {2}", nameof(queryResult), queryResult.GetType(), queryResult);
             });
 
             Console.WriteLine();
@@ -113,12 +113,12 @@ namespace Demos
                 dp.Add("LastName", "Mauri");
 
                 var queryResult = conn.QueryFirst<User>("SELECT [Id], [EmailAddress] FROM dbo.[Users] WHERE FirstName = @FirstName AND LastName = @LastName", dp);
-                Console.WriteLine("{0} ({1})", nameof(queryResult), queryResult.GetType());
+                Console.WriteLine("{0} ({1}): {2}", nameof(queryResult), queryResult.GetType(), queryResult);
             });
         }
 
         [TestMethod]
-        public void ExecuteProcedure()
+        public void T06_ExecuteProcedure()
         {
             Helper.RunDemo(conn =>
             {
@@ -138,7 +138,7 @@ namespace Demos
         }
 
         [TestMethod]
-        public void ExecuteProcedureWithOutputAndReturnValue()
+        public void T07_ExecuteProcedureWithOutputAndReturnValue()
         {
             Helper.RunDemo(conn =>
             {

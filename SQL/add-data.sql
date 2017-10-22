@@ -22,9 +22,8 @@ VALUES
 	(2, 'Sarah', 'White', 'sw@email.com', null),
 	(3, 'Mike', 'Green', 'mg@email.com', null),
 	(4, 'Ann', 'Brown', 'ab@email.com', null),
-	(5, 'Davide', 'Mauri', 'dm@email.com', 1)
+	(5, 'Davide', 'Mauri', 'info@davidemauri.it', 1)
 GO
 
 ALTER SEQUENCE dbo.UserSequence RESTART WITH 6
 GO
-
