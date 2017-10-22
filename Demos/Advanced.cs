@@ -152,7 +152,7 @@ namespace Demos
             // Test as a property in a POCO
             Helper.RunDemo(conn =>
             {
-                var result = conn.QuerySingle<Address>("SELECT geography::STPointFromText('POINT(122.3321 47.6062)', 4326) AS Location, 'Seattle' AS City, 'WA' AS State, 'US' AS Country");
+                var result = conn.QuerySingle<Address>("SELECT geography::STPointFromText('POINT(-122.3321 47.6062)', 4326) AS Location, 'Seattle' AS City, 'WA' AS State, 'US' AS Country");
 
                 Console.WriteLine("{0}: {1}", result.ToString(), result.Location.ToString());
             });
@@ -319,14 +319,14 @@ namespace Demos
         }
 
         [TestMethod]
-        public void T12_CustomHandling()
+        public void T12_CustomHandlingJArray()
         {
             Helper.RunDemo(conn =>
             {
                 SqlMapper.ResetTypeHandlers();
                 SqlMapper.AddTypeHandler(new JArrayTypeHandler());
 
-                /* Add roles */
+                /* Add tags */
                 JArray tags = new JArray() { "one", "two", "three" };
 
                 conn.Execute("dbo.SetUserTagsViaJson", new { @userId = 1, @tags = tags }, commandType: CommandType.StoredProcedure);
@@ -340,16 +340,12 @@ namespace Demos
         }
 
         [TestMethod]
-        public void T13_CustomHandling()
+        public void T13_CustomHandlingRole()
         {
             Helper.RunDemo(conn =>
             {
                 SqlMapper.ResetTypeHandlers();
                 SqlMapper.AddTypeHandler(new RolesTypeHandler());
-
-                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Roles = 'one|two' FROM dbo.[Users] WHERE Id=1");
-
-                Console.WriteLine("Roles: {0}", queryResult?.Roles);
 
                 Roles roles = new Roles
                 {
@@ -357,6 +353,12 @@ namespace Demos
                     new Role("two"),
                     new Role("three")
                 };
+
+                conn.Execute("dbo.SetUserRoles", new { @userId = 1, @roles = roles }, commandType: CommandType.StoredProcedure);
+
+                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Roles FROM dbo.[UsersRolesView] WHERE Id=1");
+
+                Console.WriteLine("Roles: {0}", queryResult?.Roles);
 
             });
         }
@@ -371,11 +373,10 @@ namespace Demos
 
                 User u = new User()
                 {
-                    Id = 5,
                     FirstName = "Davide",
                     LastName = "Mauri",
-                    EmailAddress = "info@davidemauri.it",
-                    Tags = new JArray(),
+                    EmailAddress = "davide.mauri@gmail.com",
+                    Tags = new JArray() { "alpha", "beta" },
                     Roles = new Roles()
                     {
                         new Role() { RoleName = "User" },
@@ -387,20 +388,23 @@ namespace Demos
                         Resolution = "1920x1080",
                         Style = "Black",
                         Theme = "Modern"
+                    },
+                    Company = new Company()
+                    {
+                        CompanyName = "Sensoria Inc.",
+                        Address = new Address()
+                        {
+                             City = "Redmond",
+                             State = "WA",
+                             Country = "United States",
+                             Street = "16225 NE 87th Street"
+                        }
                     }
                 };
 
-                u.Tags.Add("one");
-                u.Tags.Add("two");
-
-                var executeResult = conn.Execute("dbo.SetUserViaJson", new { @userData = u }, commandType: CommandType.StoredProcedure);
+                var executeResult = conn.ExecuteScalar<User>("dbo.SetUserViaJson", new { @userData = u }, commandType: CommandType.StoredProcedure);
 
                 Console.WriteLine("User saved: {0}", executeResult);
-
-                //var queryResult = conn.Query<User>("dbo.GetUserViaJson", new { @id = 5 }, commandType: CommandType.StoredProcedure).First();
-
-                //Console.WriteLine("User saved: {0}", queryResult);
-
             });
         }        
 

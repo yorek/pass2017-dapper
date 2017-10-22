@@ -34,17 +34,15 @@ namespace Demos.Handlers
             Roles result = new Roles();
 
             string[] roles = value.ToString().Split('|');
-            foreach (var r in roles)
-            {
-                result.Add(new Role() { RoleName = r });
-            }
+
+            result.AddRange(roles.Select( r => new Role(r)));
 
             return result;
         }
 
         public override void SetValue(IDbDataParameter parameter, Roles value)
         {
-            throw new NotImplementedException();
+            parameter.Value = value.ToString();
         }
     }
 
@@ -52,7 +50,7 @@ namespace Demos.Handlers
     {
         public override User Parse(object value)
         {
-            throw new NotImplementedException();
+            return JsonConvert.DeserializeObject<User>(value.ToString());
         }
 
         public override void SetValue(IDbDataParameter parameter, User value)

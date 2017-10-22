@@ -24,3 +24,7 @@ VALUES
 	(4, 'Ann', 'Brown', 'ab@email.com', null),
 	(5, 'Davide', 'Mauri', 'dm@email.com', 1)
 GO
+
+ALTER SEQUENCE dbo.UserSequence RESTART WITH 6
+GO
+
