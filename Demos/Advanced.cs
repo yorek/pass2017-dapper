@@ -326,14 +326,16 @@ namespace Demos
                 SqlMapper.ResetTypeHandlers();
                 SqlMapper.AddTypeHandler(new JArrayTypeHandler());
 
-                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags = '[\"one\", \"two\"]' FROM dbo.[Users] WHERE Id=1");
+                /* Add roles */
+                JArray tags = new JArray() { "one", "two", "three" };
 
-                JArray roles = new JArray() { "one", "two", "three" };
+                conn.Execute("dbo.SetUserTagsViaJson", new { @userId = 1, @tags = tags }, commandType: CommandType.StoredProcedure);
+
+                /* Query roles */
+                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags FROM dbo.[UsersTagsView] WHERE Id=1");
 
                 Console.WriteLine("Tags: {0}", queryResult?.Tags);
 
-                // TODO: create an instead of trigger to handle the JSON nicely
-                conn.Execute("UPDATE dbo.[UserRoles] SET Role = @role WHERE UserId = 2", new { @role = roles });
             });
         }
 
