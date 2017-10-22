@@ -202,15 +202,16 @@ namespace Demos
         }
 
         /* 
-         * This will fail since a string cannot be
+         * This will raise an exception since a string cannot be
          * natively converted to a JArray 
          */
         [TestMethod]
+        [ExpectedException(typeof(DataException))]
         public void T08_DefaultHandlingWithCustomType()
         {
             Helper.RunDemo(conn =>
             {
-                var result = conn.QuerySingle<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags = '[\"one\", \"two\"]' FROM dbo.[Users] WHERE Id=5");
+                var result = conn.QuerySingle<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags  FROM dbo.[UsersTagsView] WHERE Id=5");
             });
         }
 
@@ -222,7 +223,7 @@ namespace Demos
         {
             Helper.RunDemo(conn =>
             {
-                var r = conn.QuerySingle("SELECT Id, FirstName, LastName, EmailAddress, Tags = '[\"one\", \"two\"]' FROM dbo.[Users] WHERE Id=1");
+                var r = conn.QuerySingle("SELECT Id, FirstName, LastName, EmailAddress, Tags  FROM dbo.[UsersTagsView] WHERE Id=5");
                 var u = new User
                 {
                     Id = r.Id,
