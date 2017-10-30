@@ -109,7 +109,7 @@ namespace Demos
             Helper.RunDemo(conn =>
             {
                 DynamicParameters dp = new DynamicParameters();
-                dp.Add("FirstName", "Davide");
+                dp.Add("FirstName", "Davide", DbType.String, ParameterDirection.Input, 100);
                 dp.Add("LastName", "Mauri");
 
                 var queryResult = conn.QueryFirst<User>("SELECT [Id], [EmailAddress] FROM dbo.[Users] WHERE FirstName = @FirstName AND LastName = @LastName", dp);
