@@ -80,7 +80,7 @@ namespace Demos
                         u.Company = c;
                         return u;
                     },
-                    splitOn: "CompanyName").First();
+                    splitOn: "CompanyId").First();
 
                 Console.WriteLine(queryResult);
                 Console.WriteLine(queryResult.Company);
@@ -98,7 +98,7 @@ namespace Demos
                         u.Company.Address = a;
                         return u;
                     },
-                    splitOn: "CompanyName,Street").First();
+                    splitOn: "CompanyId,Street").First();
 
                 Console.WriteLine(queryResult);
                 Console.WriteLine(queryResult.Company);
