@@ -7,3 +7,7 @@ Each demo shows how to use one of the feature offered by the Micro ORM "Dapper"
 https://github.com/StackExchange/Dapper
 
 a simple yet extremely powerful and fast MicroORM.
+
+Slides are available on SlideShare:
+
+https://www.slideshare.net/davidemauri/dapper-the-microorm-that-will-change-your-life
