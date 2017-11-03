@@ -31,13 +31,7 @@ namespace Demos.Handlers
     {
         public override Roles Parse(object value)
         {
-            Roles result = new Roles();
-
-            string[] roles = value.ToString().Split('|');
-
-            result.AddRange(roles.Select( r => new Role(r)));
-
-            return result;
+            return Roles.FromString(value.ToString());
         }
 
         public override void SetValue(IDbDataParameter parameter, Roles value)

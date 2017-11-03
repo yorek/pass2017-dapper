@@ -48,6 +48,7 @@ namespace Demos
 
                 var affectedRows = conn.Execute("INSERT INTO [log].[Logins] ([UserId], [AttemptTime], [Result]) VALUES (@UserId, @AttemptTime, @Result)", paramList);
                 Console.WriteLine("Inserted rows: {0}", affectedRows);
+                Assert.AreEqual(3, affectedRows);
             });
         }
 
@@ -56,7 +57,7 @@ namespace Demos
         {
             Helper.RunDemo(conn =>
             {
-                using (var multiQueryResults = conn.QueryMultiple("SELECT Id, FirstName, LastName, EMailAddress FROM dbo.[Users]; SELECT CompanyName, Street, City, State, Country FROM dbo.[Company];"))
+                using (var multiQueryResults = conn.QueryMultiple("SELECT Id, FirstName, LastName, EMailAddress FROM dbo.[Users] WHERE Id <= 5; SELECT CompanyName, Street, City, State, Country FROM dbo.[Company] WHERE Id <= 1;"))
                 {
                     var users = multiQueryResults.Read<User>();
                     var company = multiQueryResults.ReadFirst<Company>();
@@ -64,7 +65,10 @@ namespace Demos
                     users.ToList().ForEach(u => Console.WriteLine($"{u}"));
                     Console.WriteLine();
                     Console.WriteLine(company);
-                }
+
+                    Assert.AreEqual(5, users.Count());
+                    Assert.AreEqual("Acme LLC", company.CompanyName);
+                }                
             });
         }
 
@@ -74,7 +78,7 @@ namespace Demos
             Helper.RunDemo(conn =>
             {
                 var queryResult = conn.Query<User, Company, User>(
-                    "SELECT * FROM [dbo].[UsersAndCompany]",
+                    "SELECT * FROM [dbo].[UsersAndCompany] WHERE UserId = 5",
                     (u, c) =>
                     {
                         u.Company = c;
@@ -84,6 +88,9 @@ namespace Demos
 
                 Console.WriteLine(queryResult);
                 Console.WriteLine(queryResult.Company);
+
+                Assert.AreEqual("Davide", queryResult.FirstName);
+                Assert.AreEqual("Acme LLC", queryResult.Company.CompanyName);
             });
 
             Console.WriteLine();
@@ -103,6 +110,10 @@ namespace Demos
                 Console.WriteLine(queryResult);
                 Console.WriteLine(queryResult.Company);
                 Console.WriteLine(queryResult.Company.Address);
+
+                Assert.AreEqual("Davide", queryResult.FirstName);
+                Assert.AreEqual("Acme LLC", queryResult.Company.CompanyName);
+                Assert.AreEqual("10123 Ave NE", queryResult.Company.Address.Street);
             });
         }
 
@@ -112,19 +123,22 @@ namespace Demos
             Helper.RunDemo(conn =>
             {
                 var ut = new DataTable();
-                ut.Columns.Add("UserId", typeof(string));
+                ut.Columns.Add("UserId", typeof(int));
                 ut.Columns.Add("Tag", typeof(string));
 
                 ut.Rows.Add(5, "Developer");
                 ut.Rows.Add(5, "Data Guy");
                 ut.Rows.Add(1, "SysAdmin");
 
-                conn.Execute(
+                int affectedRows = conn.Execute(
                     "INSERT INTO dbo.[UserTags] SELECT * FROM @ut",
                     new
                     {
                         @ut = ut.AsTableValuedParameter("UserTagsType")
                     });
+
+                Console.WriteLine(affectedRows);
+                Assert.AreEqual(3, affectedRows);
             });
         }
 
@@ -137,16 +151,20 @@ namespace Demos
                 var result = conn.ExecuteScalar<SqlGeometry>("SELECT geometry::Parse('POINT(0 0)') AS TestPoint");
 
                 Console.WriteLine(result.STAsText().Value);
+                Assert.AreEqual(0, result.STX);
+                Assert.AreEqual(0, result.STY);
             });
 
             // Test as a parameter
             Helper.RunDemo(conn =>
             {
-                var p = SqlGeography.Point(47.6062, 122.3321, 4326);
+                var p = SqlGeography.Point(47.6062, -122.3321, 4326);
 
                 var result = conn.ExecuteScalar<SqlGeography>("SELECT @p AS TestPoint", new { @p = p });
 
                 Console.WriteLine(result.STAsText().Value);
+                Assert.AreEqual(-122.3321, result.Long);
+                Assert.AreEqual(47.6062, result.Lat);
             });
 
             // Test as a property in a POCO
@@ -155,6 +173,7 @@ namespace Demos
                 var result = conn.QuerySingle<Address>("SELECT geography::STPointFromText('POINT(-122.3321 47.6062)', 4326) AS Location, 'Seattle' AS City, 'WA' AS State, 'US' AS Country");
 
                 Console.WriteLine("{0}: {1}", result.ToString(), result.Location.ToString());
+                Assert.AreEqual("Seattle,WA,US", result.ToString());
             });
         }
 
@@ -166,8 +185,9 @@ namespace Demos
                 var n1 = SqlHierarchyId.Parse("/1/1.1/2/");
 
                 var n2 = conn.ExecuteScalar<SqlHierarchyId>("SELECT @h.GetAncestor(2) AS HID", new { @h = n1 });
-
+               
                 Console.WriteLine("Is {0} a descendant of {1}? {2}", n1, n2, n1.IsDescendantOf(n2));
+                Assert.AreEqual(true, n1.IsDescendantOf(n2));
             });
         }
 
@@ -194,10 +214,24 @@ namespace Demos
                         Resolution = "1920x1080",
                         Style = "Black",
                         Theme = "Modern"
+                    },
+                    Company = new Company()
+                    {
+                        Id = 1,
+                        CompanyName = "Acme LLC",
+                        Address = new Address()
+                        {
+                            Street = "10123 Ave NE",
+                            City = "Redmond",
+                            State = "WA",
+                            Country = "United States"
+                        }
                     }
                 };
 
-                var result = conn.Execute("[dbo].[SetUserViaJson]", new { @userData = JsonConvert.SerializeObject(u) }, commandType: CommandType.StoredProcedure);
+                var affectedRows = conn.Execute("[dbo].[SetUserViaJson]", new { @userData = JsonConvert.SerializeObject(u) }, commandType: CommandType.StoredProcedure);
+                Console.WriteLine(affectedRows);
+                //Assert.AreEqual(9, affectedRows);
             });
         }
 
@@ -206,12 +240,12 @@ namespace Demos
          * natively converted to a JArray 
          */
         [TestMethod]
-        [ExpectedException(typeof(DataException))]
+        //[ExpectedException(typeof(DataException))]
         public void T08_DefaultHandlingWithCustomType()
         {
             Helper.RunDemo(conn =>
             {
-                var result = conn.QuerySingle<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags  FROM dbo.[UsersTagsView] WHERE Id=5");
+                var result = conn.QuerySingle<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags FROM dbo.[UsersTagsView] WHERE Id=5");
             });
         }
 
@@ -223,7 +257,7 @@ namespace Demos
         {
             Helper.RunDemo(conn =>
             {
-                var r = conn.QuerySingle("SELECT Id, FirstName, LastName, EmailAddress, Tags  FROM dbo.[UsersTagsView] WHERE Id=5");
+                var r = conn.QuerySingle("SELECT Id, FirstName, LastName, EmailAddress, Tags FROM dbo.[UsersTagsView] WHERE Id=5");
                 var u = new User
                 {
                     Id = r.Id,
@@ -235,6 +269,8 @@ namespace Demos
 
                 Console.WriteLine(u);
                 Console.WriteLine(u.Tags);
+                Assert.AreEqual("Davide", u.FirstName);
+                Assert.AreEqual("one", u.Tags[0]);
             });
         }
 
@@ -245,9 +281,12 @@ namespace Demos
 
                 // For sake of simplicity use only one dictionary
                 // since all column names are unique
-                Dictionary<string, string> columnMaps = new Dictionary<string, string>();
-                columnMaps.Add("UserId", "Id");
-                columnMaps.Add("CompanyId", "Id");
+                Dictionary<string, string> columnMaps = new Dictionary<string, string>
+                {
+                    // Column, Property
+                    { "UserId", "Id" },
+                    { "CompanyId", "Id" }
+                };
 
                 // Create mapping function
                 var mapper = new Func<Type, string, PropertyInfo>((type, columnName) =>
@@ -276,7 +315,7 @@ namespace Demos
 
                 // Same query as before (just the split column is changed)
                 var queryResult = conn.Query<User, Company, Address, User>(
-                                    "SELECT * FROM [dbo].[UsersAndCompanyAndAddress]",
+                                    "SELECT * FROM [dbo].[UsersAndCompanyAndAddress] WHERE UserId = 5",
                                     (u, c, a) =>
                                     {
                                         u.Company = c;
@@ -288,6 +327,9 @@ namespace Demos
                 Console.WriteLine(queryResult);
                 Console.WriteLine(queryResult.Company);
                 Console.WriteLine(queryResult.Company.Address);
+
+                Assert.AreEqual(5, queryResult.Id);
+                Assert.AreEqual(1, queryResult.Company.Id);
             });
         }
 
@@ -304,7 +346,7 @@ namespace Demos
 
                 // Same query as before (just the split column is changed)
                 var queryResult = conn.Query<User, Company, Address, User>(
-                                    "SELECT * FROM [dbo].[UsersAndCompanyAndAddress]",
+                                    "SELECT * FROM [dbo].[UsersAndCompanyAndAddress] WHERE UserId = 5",
                                     (u, c, a) =>
                                     {
                                         u.Company = c;
@@ -316,6 +358,9 @@ namespace Demos
                 Console.WriteLine(queryResult);
                 Console.WriteLine(queryResult.Company);
                 Console.WriteLine(queryResult.Company.Address);
+
+                Assert.AreEqual(5, queryResult.Id);
+                Assert.AreEqual(1, queryResult.Company.Id);
             });
         }
 
@@ -333,10 +378,10 @@ namespace Demos
                 conn.Execute("dbo.SetUserTagsViaJson", new { @userId = 1, @tags = tags }, commandType: CommandType.StoredProcedure);
 
                 /* Query roles */
-                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags FROM dbo.[UsersTagsView] WHERE Id=1");
+                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Tags FROM dbo.[UsersTagsView] WHERE Id = 1");
 
                 Console.WriteLine("Tags: {0}", queryResult?.Tags);
-
+                Assert.AreEqual(3, queryResult.Tags.Count());
             });
         }
 
@@ -357,10 +402,10 @@ namespace Demos
 
                 conn.Execute("dbo.SetUserRoles", new { @userId = 1, @roles = roles }, commandType: CommandType.StoredProcedure);
 
-                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Roles FROM dbo.[UsersRolesView] WHERE Id=1");
+                var queryResult = conn.QueryFirstOrDefault<User>("SELECT Id, FirstName, LastName, EmailAddress, Roles FROM dbo.[UsersRolesView] WHERE Id = 1");
 
                 Console.WriteLine("Roles: {0}", queryResult?.Roles);
-
+                Assert.AreEqual(3, queryResult.Roles.Count());
             });
         }
 
@@ -406,6 +451,7 @@ namespace Demos
                 var executeResult = conn.ExecuteScalar<User>("dbo.SetUserViaJson", new { @userData = u }, commandType: CommandType.StoredProcedure);
 
                 Console.WriteLine("User saved: {0}", executeResult);
+                Assert.AreEqual("Davide", executeResult.FirstName);
             });
         }        
 

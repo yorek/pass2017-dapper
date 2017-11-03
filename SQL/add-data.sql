@@ -5,14 +5,13 @@ DELETE FROM [dbo].[Company]
 DELETE FROM [dbo].[Users]
 GO
 
-SET IDENTITY_INSERT dbo.Company ON;
-
 INSERT INTO dbo.[Company] 
 	([Id], [CompanyName], [Street], [City], [State], [Country])
 VALUES 
 	(1, 'Acme LLC', '10123 Ave NE', N'Redmond', N'WA', N'United States');
+GO
 
-SET IDENTITY_INSERT dbo.Company OFF;
+ALTER SEQUENCE dbo.CompanySequence RESTART WITH 2
 GO
 
 INSERT INTO dbo.[Users] 

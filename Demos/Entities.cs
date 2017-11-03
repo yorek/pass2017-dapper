@@ -82,6 +82,17 @@ namespace Demos.Entities
         {
             return string.Join("|", this);
         }
+
+        public static Roles FromString(string value)
+        {
+            Roles result = new Roles();
+
+            string[] roles = value.ToString().Split('|');
+
+            result.AddRange(roles.Select(r => new Role(r)));
+
+            return result;
+        }
     }
 
     public class Preferences

@@ -22,12 +22,14 @@ namespace Demos
             Helper.RunDemo(conn => {
                 var firstName = conn.ExecuteScalar("SELECT [FirstName] FROM dbo.[Users] WHERE [Id] = 1");
                 Console.WriteLine("{0} ({1}): {2}", nameof(firstName), firstName.GetType(), firstName);
+                Assert.AreEqual("Joe", firstName);
             });
 
             // Return a scalar typed value
             Helper.RunDemo(conn => {
                 var firstName = conn.ExecuteScalar<string>("SELECT [FirstName] FROM dbo.[Users] WHERE [Id] = 1");
                 Console.WriteLine("{0} ({1}): {2}", nameof(firstName), firstName.GetType(), firstName);
+                Assert.AreEqual("Joe", firstName);
             });
         }
 
@@ -37,8 +39,9 @@ namespace Demos
             // Return affected number rows
             Helper.RunDemo(conn =>
             {
-                int affectedRows = conn.Execute("UPDATE dbo.[Users] SET [FirstName] = 'John' WHERE [Id] = 1");
+                int affectedRows = conn.Execute("UPDATE dbo.[Users] SET [FirstName] = 'John' WHERE [Id] = 3");
                 Console.WriteLine("'UPDATE' Affected Rows: {0}", affectedRows);
+                Assert.AreEqual(1, affectedRows);
             });
 
             Console.WriteLine();
@@ -47,6 +50,7 @@ namespace Demos
             Helper.RunDemo(conn => {
                 int affectedRows = conn.Execute("SELECT [FirstName] FROM dbo.[Users] WHERE [Id] = 1");
                 Console.WriteLine("'SELECT' Affected Rows: {0}", affectedRows);
+                Assert.AreEqual(-1, affectedRows);
             });
         }
 
@@ -59,7 +63,10 @@ namespace Demos
                 var queryResult = conn.Query("SELECT [Id], [FirstName], [LastName] FROM dbo.[Users]");
                 Console.WriteLine("{0} ({1})", nameof(queryResult), queryResult.GetType());
 
+                //Console.WriteLine(queryResult.First().FirstName);
+
                 queryResult.ToList().ForEach(u => Console.WriteLine($"{u}"));
+                Assert.AreEqual(5, queryResult.Count());
             });
 
             Console.WriteLine();
@@ -71,6 +78,7 @@ namespace Demos
                 Console.WriteLine("{0} ({1})", nameof(queryResult), queryResult.GetType());
 
                 queryResult.ToList().ForEach(u => Console.WriteLine($"{u}"));
+                Assert.AreEqual(5, queryResult.Count());
             });
         }
 
@@ -79,8 +87,9 @@ namespace Demos
         {
             Helper.RunDemo(conn =>
             {
-                var queryResult = conn.QueryFirst<User>("SELECT [Id], [FirstName], [LastName] FROM dbo.[Users] WHERE Id = @Id", new { Id = 1 });
+                var queryResult = conn.QueryFirst<User>("SELECT [Id], [FirstName], [LastName] FROM dbo.[Users] WHERE Id = @Id", new { @Id = 1 });
                 Console.WriteLine("{0} ({1}): {2}", nameof(queryResult), queryResult.GetType(), queryResult);
+                Assert.AreEqual(1, queryResult.Id);
             });
 
             Console.WriteLine();
@@ -89,6 +98,7 @@ namespace Demos
             {
                 var queryResult = conn.QueryFirst<User>("SELECT [Id], [EmailAddress] FROM dbo.[Users] WHERE FirstName = @FirstName AND LastName = @LastName", new { FirstName = "Davide", LastName = "Mauri" });
                 Console.WriteLine("{0} ({1}): {2}", nameof(queryResult), queryResult.GetType(), queryResult);
+                Assert.AreEqual(5, queryResult.Id);
             });
         }
 
@@ -102,6 +112,7 @@ namespace Demos
 
                 var queryResult = conn.QueryFirst<User>("SELECT [Id], [FirstName], [LastName] FROM dbo.[Users] WHERE Id = @Id", dp);
                 Console.WriteLine("{0} ({1}): {2}", nameof(queryResult), queryResult.GetType(), queryResult);
+                Assert.AreEqual(1, queryResult.Id);
             });
 
             Console.WriteLine();
@@ -114,6 +125,7 @@ namespace Demos
 
                 var queryResult = conn.QueryFirst<User>("SELECT [Id], [EmailAddress] FROM dbo.[Users] WHERE FirstName = @FirstName AND LastName = @LastName", dp);
                 Console.WriteLine("{0} ({1}): {2}", nameof(queryResult), queryResult.GetType(), queryResult);
+                Assert.AreEqual(5, queryResult.Id);
             });
         }
 
@@ -125,6 +137,7 @@ namespace Demos
                 var queryResult = conn.QuerySingle("dbo.ProcedureBasic", new { @email = "info@davidemauri.it" }, commandType: CommandType.StoredProcedure);
 
                 Console.WriteLine("{0} ({1}): {2}", nameof(queryResult), queryResult.GetType(), queryResult);
+                Assert.AreEqual(5, queryResult.Id);
             });
 
             Console.WriteLine();
@@ -134,6 +147,7 @@ namespace Demos
                 var queryResult = conn.QuerySingle<User>("dbo.ProcedureBasic", new { @email = "info@davidemauri.it" }, commandType: CommandType.StoredProcedure);
 
                 Console.WriteLine("{0} ({1}): {2}", nameof(queryResult), queryResult.GetType(), queryResult);
+                Assert.AreEqual(5, queryResult.Id);
             });
         }
 
@@ -151,6 +165,7 @@ namespace Demos
                 conn.Execute("dbo.ProcedureWithOutputAndReturnValue", dp, commandType: CommandType.StoredProcedure);
 
                 Console.WriteLine("User: {0}, {1}, {2}", dp.Get<int>("result"), dp.Get<string>("firstName"), dp.Get<string>("lastName"));
+                Assert.AreEqual("Davide", dp.Get<string>("firstName"));
             });
         }
     }
